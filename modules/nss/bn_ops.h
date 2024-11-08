@@ -1,5 +1,7 @@
 #include <cryptofuzz/components.h>
 #include <cryptofuzz/operations.h>
+#include <cryptofuzz/util.h>
+
 #include <mpi/mpi.h>
 
 namespace cryptofuzz {
@@ -59,8 +61,6 @@ end:
             return ret;
         }
 };
-
-void Initialize(void);
 
 class Operation {
     public:
@@ -177,23 +177,6 @@ class Exp : public Operation {
     public:
         bool Run(Datasource& ds, Bignum& res, std::vector<Bignum>& bn) const override;
 };
-
-#if 0
-class Mod_NIST_256 : public Operation {
-    public:
-        bool Run(Datasource& ds, Bignum& res, std::vector<Bignum>& bn) const override;
-};
-
-class Mod_NIST_384: public Operation {
-    public:
-        bool Run(Datasource& ds, Bignum& res, std::vector<Bignum>& bn) const override;
-};
-
-class Mod_NIST_521 : public Operation {
-    public:
-        bool Run(Datasource& ds, Bignum& res, std::vector<Bignum>& bn) const override;
-};
-#endif
 
 } /* namespace NSS_bignum */
 } /* namespace module */

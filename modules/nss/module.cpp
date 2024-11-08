@@ -1,12 +1,20 @@
 #include "module.h"
-#include <cryptofuzz/repository.h>
-#include <fuzzing/datasource/id.hpp>
+
 #include <boost/multiprecision/cpp_int.hpp>
-#include <nss.h>
-#include <pk11pub.h>
-#include <nss_scoped_ptrs.h>
+#include <cryptofuzz/repository.h>
+#include "cryptofuzz/components.h"
+#include "cryptofuzz/util.h"
+#include <fuzzing/datasource/id.hpp>
+
 #include <blapi.h>
+#include <nss.h>
+#include <nss_scoped_ptrs.h>
+#include <pk11pub.h>
+#include <string>
+
 #include "bn_ops.h"
+#include "prtypes.h"
+#include "seccomon.h"
 
 namespace cryptofuzz {
 namespace module {
@@ -14,13 +22,12 @@ namespace module {
 NSS::NSS(void) :
     Module("NSS") {
     setenv("NSS_STRICT_NOFORK", "DISABLED", 1);
-    const SECStatus rv = NSS_NoDB_Init(NULL);
+
+    SECStatus rv = NSS_NoDB_Init(nullptr);
     if(rv != SECSuccess) {
         printf("Cannot initialize NSS\n");
         abort();
     }
-
-    NSS_bignum::Initialize();
 }
 
 NSS::~NSS(void) {
@@ -28,7 +35,7 @@ NSS::~NSS(void) {
 }
 
 namespace nss_detail {
-    std::optional<SECOidTag> toOID(const component::DigestType& digestType) {
+    std::optional<SECOidTag> toDigestOID(const component::DigestType& digestType) {
         static const std::map<uint64_t, SECOidTag> LUT = {
             { CF_DIGEST("SHA1"), SEC_OID_SHA1 },
             { CF_DIGEST("SHA224"), SEC_OID_SHA224 },
@@ -61,7 +68,7 @@ std::optional<component::Digest> NSS::OpDigest(operation::Digest& op) {
     /* Initialize */
     {
         std::optional<SECOidTag> oid;
-        CF_CHECK_NE(oid = nss_detail::toOID(op.digestType), std::nullopt);
+        CF_CHECK_NE(oid = nss_detail::toDigestOID(op.digestType), std::nullopt);
         CF_CHECK_NE(ctx = PK11_CreateDigestContext(*oid), nullptr);
         CF_CHECK_EQ(PK11_DigestBegin(ctx), SECSuccess);
         parts = util::ToParts(ds, op.cleartext);
@@ -1072,17 +1079,6 @@ std::optional<component::Bignum> NSS::OpBignumCalc(operation::BignumCalc& op) {
         case    CF_CALCOP("Exp(A,B)"):
             opRunner = std::make_unique<NSS_bignum::Exp>();
             break;
-#if 0
-        case    CF_CALCOP("Mod_NIST_256(A)"):
-            opRunner = std::make_unique<NSS_bignum::Mod_NIST_256>();
-            break;
-        case    CF_CALCOP("Mod_NIST_384(A)"):
-            opRunner = std::make_unique<NSS_bignum::Mod_NIST_384>();
-            break;
-        case    CF_CALCOP("Mod_NIST_521(A)"):
-            opRunner = std::make_unique<NSS_bignum::Mod_NIST_521>();
-            break;
-#endif
     }
 
     CF_CHECK_NE(opRunner, nullptr);
@@ -1090,6 +1086,27 @@ std::optional<component::Bignum> NSS::OpBignumCalc(operation::BignumCalc& op) {
 
     ret = res.ToComponentBignum();
 
+end:
+    return ret;
+}
+
+std::optional<component::Bignum> NSS::OpDH_Derive(operation::DH_Derive& op) {
+    std::optional<component::Bignum> ret = std::nullopt;
+    Datasource ds(op.modifier.GetPtr(), op.modifier.GetSize());
+
+    std::string pubKeyStr = op.pub.ToTrimmedString();
+    std::string primeStr = op.prime.ToTrimmedString();
+    std::string privStr = op.priv.ToTrimmedString();
+
+    SECItem pubKey = { siBuffer, (unsigned char *)pubKeyStr.data(), (unsigned int)pubKeyStr.size() };
+    SECItem prime = { siBuffer, (unsigned char *)primeStr.data(), (unsigned int)primeStr.size() };
+    SECItem priv = { siBuffer, (unsigned char *)privStr.data(), (unsigned int)privStr.size() };
+
+    SECItem derived;
+    CF_CHECK_EQ(DH_Derive(&pubKey, &prime, &priv, &derived, 0), SECSuccess);
+
+    ret = util::BinToDec(derived.data, derived.len);
+    SECITEM_FreeItem(&derived, PR_FALSE);
 end:
     return ret;
 }
