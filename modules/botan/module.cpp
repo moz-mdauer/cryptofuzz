@@ -919,11 +919,11 @@ std::optional<component::ECC_KeyPair> Botan::OpECC_GenerateKeyPair(operation::EC
         ::Botan::EC_Group group(*curveString);
         auto priv = ::Botan::ECDSA_PrivateKey(rng, group);
 
-        const auto pub_x = priv.public_point().get_affine_x();
-        const auto pub_y = priv.public_point().get_affine_y();
+        const auto pub_x = ::Botan::BigInt(priv._public_ec_point().x_bytes());
+        const auto pub_y = ::Botan::BigInt(priv._public_ec_point().y_bytes());
 
         {
-            const auto pub = std::make_unique<::Botan::ECDSA_PublicKey>(::Botan::ECDSA_PublicKey(group, priv.public_point()));
+            const auto pub = priv.public_key();
             CF_ASSERT(pub->check_key(rng, true) == true, "Generated pubkey fails validation");
         }
 
@@ -950,7 +950,7 @@ std::optional<bool> Botan::OpECC_ValidatePubkey(operation::ECC_ValidatePubkey& o
         ::Botan::EC_Group group(*curveString);
         const ::Botan::BigInt pub_x(op.pub.first.ToString(ds));
         const ::Botan::BigInt pub_y(op.pub.second.ToString(ds));
-        const ::Botan::PointGFp public_point = group.point(pub_x, pub_y);
+        const ::Botan::EC_AffinePoint public_point = ::Botan::EC_AffinePoint::from_bigint_xy(group, ::Botan::BigInt(pub_x), ::Botan::BigInt(pub_y)).value();
         pub = std::make_unique<::Botan::ECDSA_PublicKey>(::Botan::ECDSA_PublicKey(group, public_point));
 
         ret = pub->check_key(rng, true);
@@ -996,8 +996,8 @@ std::optional<component::ECC_PublicKey> Botan::OpECC_PrivateToPublic(operation::
 
             auto priv = std::make_unique<::Botan::ECDSA_PrivateKey>(::Botan::ECDSA_PrivateKey(rng, group, priv_bn));
 
-            const auto pub_x = priv->public_point().get_affine_x();
-            const auto pub_y = priv->public_point().get_affine_y();
+            const auto pub_x = ::Botan::BigInt(priv->_public_ec_point().x_bytes());
+            const auto pub_y = ::Botan::BigInt(priv->_public_ec_point().y_bytes());
 
             ret = { pub_x.to_dec_string(), pub_y.to_dec_string() };
         }
@@ -1100,8 +1100,8 @@ namespace Botan_detail {
                             }
                         }
 
-                        const auto pub_x = priv->public_point().get_affine_x().to_dec_string();
-                        const auto pub_y = priv->public_point().get_affine_y().to_dec_string();
+                        const auto pub_x = ::Botan::BigInt(priv->_public_ec_point().x_bytes()).to_dec_string();
+                        const auto pub_y = ::Botan::BigInt(priv->_public_ec_point().y_bytes()).to_dec_string();
 
                         const auto R_str = R.to_dec_string();
                         const auto S_str = S.to_dec_string();
@@ -1188,7 +1188,7 @@ namespace Botan_detail {
                 {
                     const ::Botan::BigInt pub_x(op.signature.pub.first.ToString(ds));
                     const ::Botan::BigInt pub_y(op.signature.pub.second.ToString(ds));
-                    const ::Botan::PointGFp public_point = group->point(pub_x, pub_y);
+                    const ::Botan::EC_AffinePoint public_point = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(pub_x), ::Botan::BigInt(pub_y)).value();
                     pub = std::make_unique<PubkeyType>(PubkeyType(*group, public_point));
                 }
 
@@ -1293,8 +1293,8 @@ std::optional<component::ECC_PublicKey> Botan::OpECDSA_Recover(operation::ECDSA_
             pub = std::make_unique<::Botan::ECDSA_PublicKey>(*group, CT.Get(), R, S, op.id);
 
             ret = {
-                pub->public_point().get_affine_x().to_dec_string(),
-                pub->public_point().get_affine_y().to_dec_string()
+                ::Botan::BigInt(pub->_public_ec_point().x_bytes()).to_dec_string(),
+                ::Botan::BigInt(pub->_public_ec_point().y_bytes()).to_dec_string()
             };
         } catch ( ::Botan::Invalid_State& e ) {
         } catch ( ::Botan::Decoding_Error& ) {
@@ -1353,7 +1353,7 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Add(operation::ECC_Point_
     BOTAN_FUZZER_RNG;
 
     std::unique_ptr<::Botan::EC_Group> group = nullptr;
-    std::unique_ptr<::Botan::PointGFp> a, b;
+    std::unique_ptr<::Botan::EC_AffinePoint> a, b;
 
     try {
         {
@@ -1372,11 +1372,10 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Add(operation::ECC_Point_
                 CF_CHECK_GTE(a_y, 0);
 
                 try {
-                    a = std::make_unique<::Botan::PointGFp>(group->point(a_x, a_y));
+                    a = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, a_x, a_y).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
-                CF_CHECK_TRUE(a->on_the_curve());
             }
 
             /* B */
@@ -1388,27 +1387,25 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Add(operation::ECC_Point_
                 CF_CHECK_GTE(b_y, 0);
 
                 try {
-                    b = std::make_unique<::Botan::PointGFp>(group->point(b_x, b_y));
+                    b = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, b_x, b_y).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
-
-                CF_CHECK_TRUE(b->on_the_curve());
             }
 
-            const bool is_negation = *a == -(*b);
+            const bool is_negation = *a == b->negate();
 
-            ::Botan::PointGFp _res = *a + *b;
+            ::Botan::EC_AffinePoint _res = a->add(*b);
 
-            const bool is_zero = _res.is_zero();
+            const bool is_zero = _res.is_identity();
 
             /* If A is a negation of B, then addition of both should result in point at infinity */
             /* Otherwise, it should result in non-infinity. */
             CF_ASSERT(is_zero == is_negation, "Unexpected point addition result");
             CF_CHECK_FALSE(is_zero);
 
-            const auto x = _res.get_affine_x();
-            const auto y = _res.get_affine_y();
+            const auto x = ::Botan::BigInt(_res.x_bytes());
+            const auto y = ::Botan::BigInt(_res.y_bytes());
 
             ret = {
                 util::HexToDec(x.to_hex_string()),
@@ -1432,7 +1429,7 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Sub(operation::ECC_Point_
     BOTAN_FUZZER_RNG;
 
     std::unique_ptr<::Botan::EC_Group> group = nullptr;
-    std::unique_ptr<::Botan::PointGFp> a, b;
+    std::unique_ptr<::Botan::EC_AffinePoint> a, b;
 
     try {
         {
@@ -1451,11 +1448,10 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Sub(operation::ECC_Point_
                 CF_CHECK_GTE(a_y, 0);
 
                 try {
-                    a = std::make_unique<::Botan::PointGFp>(group->point(a_x, a_y));
+                    a = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, a_x, a_y).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
-                CF_CHECK_TRUE(a->on_the_curve());
             }
 
             /* B */
@@ -1467,27 +1463,25 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Sub(operation::ECC_Point_
                 CF_CHECK_GTE(b_y, 0);
 
                 try {
-                    b = std::make_unique<::Botan::PointGFp>(group->point(b_x, b_y));
+                    b = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, b_x, b_y).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
-
-                CF_CHECK_TRUE(b->on_the_curve());
             }
 
             const bool is_eq = *a == *b;
 
-            ::Botan::PointGFp _res = *a - *b;
+            ::Botan::EC_AffinePoint _res = a->add(b->negate());
 
-            const bool is_zero = _res.is_zero();
+            const bool is_zero = _res.is_identity();
 
             /* If A equals B, then subtraction of both should result in point at infinity */
             /* Otherwise, it should result in non-infinity. */
             CF_ASSERT(is_zero == is_eq, "Unexpected point subtraction result");
             CF_CHECK_FALSE(is_zero);
 
-            const auto x = _res.get_affine_x();
-            const auto y = _res.get_affine_y();
+            const auto x = ::Botan::BigInt(_res.x_bytes());
+            const auto y = ::Botan::BigInt(_res.y_bytes());
 
             ret = {
                 util::HexToDec(x.to_hex_string()),
@@ -1525,14 +1519,13 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Mul(operation::ECC_Point_
         const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
         CF_CHECK_GTE(a_y, 0);
 
-        const auto a = group->point(a_x, a_y);
-        CF_CHECK_TRUE(a.on_the_curve());
+        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value();
 
         const auto b = ::Botan::BigInt(op.b.ToString(ds));
 
         CF_CHECK_GTE(b, 0);
 
-        std::vector<::Botan::BigInt> ws(::Botan::PointGFp::WORKSPACE_SIZE);
+        const auto k = ::Botan::EC_Scalar::from_bigint(*group, b);
 
         bool useBlinding = false;
 #if defined(CRYPTOFUZZ_BOTAN_IS_ORACLE)
@@ -1541,16 +1534,16 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Mul(operation::ECC_Point_
         } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
 #endif
 
-        ::Botan::PointGFp _res;
+        std::unique_ptr<::Botan::EC_AffinePoint> _res;
 
         if ( useBlinding == false ) {
-            _res = a * b;
+            _res = std::make_unique<::Botan::EC_AffinePoint>(a.mul(k, rng));
         } else {
-            _res = group->blinded_var_point_multiply(a, b, rng, ws);
+            _res = std::make_unique<::Botan::EC_AffinePoint>(a.mul(k, rng));
         }
 
-        const auto x = _res.get_affine_x();
-        const auto y = _res.get_affine_y();
+        const auto x = ::Botan::BigInt(_res->x_bytes());
+        const auto y = ::Botan::BigInt(_res->y_bytes());
 
         ret = {
             util::HexToDec(x.to_hex_string()),
@@ -1584,13 +1577,12 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Neg(operation::ECC_Point_
         const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
         CF_CHECK_GTE(a_y, 0);
 
-        const auto a = group->point(a_x, a_y);
-        CF_CHECK_TRUE(a.on_the_curve());
+        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value();
 
-        const ::Botan::PointGFp _res = -a;
+        const ::Botan::EC_AffinePoint _res = a.negate();
 
-        const auto x = _res.get_affine_x();
-        const auto y = _res.get_affine_y();
+        const auto x = ::Botan::BigInt(_res.x_bytes());
+        const auto y = ::Botan::BigInt(_res.y_bytes());
 
         ret = {
             util::HexToDec(x.to_hex_string()),
@@ -1625,13 +1617,12 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Dbl(operation::ECC_Point_
         const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
         CF_CHECK_GTE(a_y, 0);
 
-        const auto a = group->point(a_x, a_y);
-        CF_CHECK_TRUE(a.on_the_curve());
+        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value();
 
-        const ::Botan::PointGFp _res = a + a;
+        const ::Botan::EC_AffinePoint _res = a.add(a);
 
-        const auto x = _res.get_affine_x();
-        const auto y = _res.get_affine_y();
+        const auto x = ::Botan::BigInt(_res.x_bytes());
+        const auto y = ::Botan::BigInt(_res.y_bytes());
 
         ret = {
             util::HexToDec(x.to_hex_string()),
@@ -1654,7 +1645,7 @@ std::optional<bool> Botan::OpECC_Point_Cmp(operation::ECC_Point_Cmp& op) {
     BOTAN_FUZZER_RNG;
 
     std::unique_ptr<::Botan::EC_Group> group = nullptr;
-    std::unique_ptr<::Botan::PointGFp> a, b;
+    std::unique_ptr<::Botan::EC_AffinePoint> a, b;
 
     try {
         {
@@ -1673,11 +1664,10 @@ std::optional<bool> Botan::OpECC_Point_Cmp(operation::ECC_Point_Cmp& op) {
                 CF_CHECK_GTE(a_y, 0);
 
                 try {
-                    a = std::make_unique<::Botan::PointGFp>(group->point(a_x, a_y));
+                    a = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
-                CF_CHECK_TRUE(a->on_the_curve());
             }
 
             /* B */
@@ -1689,12 +1679,10 @@ std::optional<bool> Botan::OpECC_Point_Cmp(operation::ECC_Point_Cmp& op) {
                 CF_CHECK_GTE(b_y, 0);
 
                 try {
-                    b = std::make_unique<::Botan::PointGFp>(group->point(b_x, b_y));
+                    b = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(b_x), ::Botan::BigInt(b_y)).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
-
-                CF_CHECK_TRUE(b->on_the_curve());
             }
 
             ret = *a == *b;

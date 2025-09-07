@@ -4,6 +4,7 @@
 #include <botan/numthry.h>
 #include <botan/reducer.h>
 #include <botan/internal/divide.h>
+#include <botan/internal/barrett.h>
 #include <botan/internal/primality.h>
 #include <botan/system_rng.h>
 
@@ -412,7 +413,7 @@ bool IsPrime::Run(Datasource& ds, Bignum& res, std::vector<Bignum>& bn, const st
         return false;
     }
 
-    Botan::Modular_Reducer mod_n(bn[0].Ref());
+    auto mod_n = Botan::Barrett_Reduction::for_public_modulus(bn[0].Ref());
     if ( Botan::is_bailie_psw_probable_prime(bn[0].Ref(), mod_n) ) {
         res = 1;
     } else {
