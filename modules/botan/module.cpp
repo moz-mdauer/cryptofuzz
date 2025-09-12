@@ -34,12 +34,12 @@ Botan::Botan(void) :
     {
         const ::Botan::OID secp112r1_oid("1.3.132.0.6");
         const ::Botan::EC_Group secp112r1(
-                ::Botan::BigInt("4451685225093714772084598273548427"),
-                ::Botan::BigInt("4451685225093714772084598273548424"),
-                ::Botan::BigInt("2061118396808653202902996166388514"),
-                ::Botan::BigInt("188281465057972534892223778713752"),
-                ::Botan::BigInt("3419875491033170827167861896082688"),
-                ::Botan::BigInt("4451685225093714776491891542548933"),
+                ::Botan::BigInt::from_string("4451685225093714772084598273548427"),
+                ::Botan::BigInt::from_string("4451685225093714772084598273548424"),
+                ::Botan::BigInt::from_string("2061118396808653202902996166388514"),
+                ::Botan::BigInt::from_string("188281465057972534892223778713752"),
+                ::Botan::BigInt::from_string("3419875491033170827167861896082688"),
+                ::Botan::BigInt::from_string("4451685225093714776491891542548933"),
                 1,
                 secp112r1_oid);
         ::Botan::OID::register_oid(secp112r1_oid, "secp112r1");
@@ -48,12 +48,12 @@ Botan::Botan(void) :
     {
         const ::Botan::OID secp112r2_oid("1.3.132.0.7");
         const ::Botan::EC_Group secp112r2(
-                ::Botan::BigInt("4451685225093714772084598273548427"),
-                ::Botan::BigInt("1970543761890640310119143205433388"),
-                ::Botan::BigInt("1660538572255285715897238774208265"),
-                ::Botan::BigInt("1534098225527667214992304222930499"),
-                ::Botan::BigInt("3525120595527770847583704454622871"),
-                ::Botan::BigInt("1112921306273428674967732714786891"),
+                ::Botan::BigInt::from_string("4451685225093714772084598273548427"),
+                ::Botan::BigInt::from_string("1970543761890640310119143205433388"),
+                ::Botan::BigInt::from_string("1660538572255285715897238774208265"),
+                ::Botan::BigInt::from_string("1534098225527667214992304222930499"),
+                ::Botan::BigInt::from_string("3525120595527770847583704454622871"),
+                ::Botan::BigInt::from_string("1112921306273428674967732714786891"),
                 4,
                 secp112r2_oid);
         ::Botan::OID::register_oid(secp112r2_oid, "secp112r2");
@@ -62,12 +62,12 @@ Botan::Botan(void) :
     {
         const ::Botan::OID secp128r1_oid("1.3.132.0.28");
         const ::Botan::EC_Group secp128r1(
-                ::Botan::BigInt("340282366762482138434845932244680310783"),
-                ::Botan::BigInt("340282366762482138434845932244680310780"),
-                ::Botan::BigInt("308990863222245658030922601041482374867"),
-                ::Botan::BigInt("29408993404948928992877151431649155974"),
-                ::Botan::BigInt("275621562871047521857442314737465260675"),
-                ::Botan::BigInt("340282366762482138443322565580356624661"),
+                ::Botan::BigInt::from_string("340282366762482138434845932244680310783"),
+                ::Botan::BigInt::from_string("340282366762482138434845932244680310780"),
+                ::Botan::BigInt::from_string("308990863222245658030922601041482374867"),
+                ::Botan::BigInt::from_string("29408993404948928992877151431649155974"),
+                ::Botan::BigInt::from_string("275621562871047521857442314737465260675"),
+                ::Botan::BigInt::from_string("340282366762482138443322565580356624661"),
                 1,
                 secp128r1_oid);
         ::Botan::OID::register_oid(secp128r1_oid, "secp128r1");
@@ -76,12 +76,12 @@ Botan::Botan(void) :
     {
         const ::Botan::OID secp128r2_oid("1.3.132.0.29");
         const ::Botan::EC_Group secp128r2(
-                ::Botan::BigInt("340282366762482138434845932244680310783"),
-                ::Botan::BigInt("284470887156368047300405921324061011681"),
-                ::Botan::BigInt("126188322377389722996253562430093625949"),
-                ::Botan::BigInt("164048790688614013222215505581242564928"),
-                ::Botan::BigInt("52787839253935625605232456597451787076"),
-                ::Botan::BigInt("85070591690620534603955721926813660579"),
+                ::Botan::BigInt::from_string("340282366762482138434845932244680310783"),
+                ::Botan::BigInt::from_string("284470887156368047300405921324061011681"),
+                ::Botan::BigInt::from_string("126188322377389722996253562430093625949"),
+                ::Botan::BigInt::from_string("164048790688614013222215505581242564928"),
+                ::Botan::BigInt::from_string("52787839253935625605232456597451787076"),
+                ::Botan::BigInt::from_string("85070591690620534603955721926813660579"),
                 4,
                 secp128r2_oid);
         ::Botan::OID::register_oid(secp128r2_oid, "secp128r2");
@@ -949,9 +949,9 @@ std::optional<bool> Botan::OpECC_ValidatePubkey(operation::ECC_ValidatePubkey& o
         CF_CHECK_NE(curveString = Botan_detail::CurveIDToString(op.curveType.Get()), std::nullopt);
 
         ::Botan::EC_Group group(*curveString);
-        const ::Botan::BigInt pub_x(op.pub.first.ToString(ds));
-        const ::Botan::BigInt pub_y(op.pub.second.ToString(ds));
-        const ::Botan::EC_AffinePoint public_point = ::Botan::EC_AffinePoint::from_bigint_xy(group, ::Botan::BigInt(pub_x), ::Botan::BigInt(pub_y)).value();
+        const auto pub_x = ::Botan::BigInt::from_string(op.pub.first.ToString(ds));
+        const auto pub_y = ::Botan::BigInt::from_string(op.pub.second.ToString(ds));
+        const ::Botan::EC_AffinePoint public_point = ::Botan::EC_AffinePoint::from_bigint_xy(group, pub_x, pub_y).value();
         pub = std::make_unique<::Botan::ECDSA_PublicKey>(::Botan::ECDSA_PublicKey(group, public_point));
 
         ret = pub->check_key(rng, true);
@@ -1092,13 +1092,13 @@ namespace Botan_detail {
                             /* For compatibility with the secp256k1 library.
                              * See: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#low-s-values-in-signatures
                              */
-                            if (S > ::Botan::BigInt("57896044618658097711785492504343953926418782139537452191302581570759080747168")) {
-                                S = ::Botan::BigInt("115792089237316195423570985008687907852837564279074904382605163141518161494337") - S;
+                            if (S > ::Botan::BigInt::from_string("57896044618658097711785492504343953926418782139537452191302581570759080747168")) {
+                                S = ::Botan::BigInt::from_string("115792089237316195423570985008687907852837564279074904382605163141518161494337") - S;
                             }
                         } else if ( op.curveType.Get() == CF_ECC_CURVE("secp256r1") ) {
                             /* Similar ECDSA signature malleability adjustment for compatibility with trezor-firmware */
-                            if (S > ::Botan::BigInt("57896044605178124381348723474703786764998477612067880171211129530534256022184")) {
-                                S = ::Botan::BigInt("115792089210356248762697446949407573529996955224135760342422259061068512044369") - S;
+                            if (S > ::Botan::BigInt::from_string("57896044605178124381348723474703786764998477612067880171211129530534256022184")) {
+                                S = ::Botan::BigInt::from_string("115792089210356248762697446949407573529996955224135760342422259061068512044369") - S;
                             }
                         }
 
@@ -1189,9 +1189,9 @@ namespace Botan_detail {
 
                 /* Construct pubkey */
                 {
-                    const ::Botan::BigInt pub_x(op.signature.pub.first.ToString(ds));
-                    const ::Botan::BigInt pub_y(op.signature.pub.second.ToString(ds));
-                    const ::Botan::EC_AffinePoint public_point = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(pub_x), ::Botan::BigInt(pub_y)).value();
+                    const auto pub_x = ::Botan::BigInt::from_string(op.signature.pub.first.ToString(ds));
+                    const auto pub_y = ::Botan::BigInt::from_string(op.signature.pub.second.ToString(ds));
+                    const ::Botan::EC_AffinePoint public_point = ::Botan::EC_AffinePoint::from_bigint_xy(*group, pub_x, pub_y).value();
                     pub = std::make_unique<PubkeyType>(PubkeyType(*group, public_point));
                 }
 
@@ -1296,10 +1296,11 @@ std::optional<component::ECC_PublicKey> Botan::OpECDSA_Recover(operation::ECDSA_
             pub = std::make_unique<::Botan::ECDSA_PublicKey>(*group, CT.Get(), R, S, op.id);
 
             const auto public_point = ::Botan::EC_AffinePoint::deserialize(*group, pub->raw_public_key_bits());
-            const auto pub_x = ::Botan::BigInt::from_bytes(public_point->x_bytes());
-            const auto pub_y = ::Botan::BigInt::from_bytes(public_point->y_bytes());
 
-            ret = { pub_x.to_dec_string(), pub_y.to_dec_string() };
+            ret = {
+                ::Botan::BigInt::from_bytes(public_point->x_bytes()).to_dec_string(),
+                ::Botan::BigInt::from_bytes(public_point->y_bytes()).to_dec_string()
+            };
         } catch ( ::Botan::Invalid_State& e ) {
         } catch ( ::Botan::Decoding_Error& ) {
         } catch ( ::Botan::Invalid_Argument& ) {
@@ -1340,7 +1341,7 @@ std::optional<component::Bignum> Botan::OpDH_Derive(operation::DH_Derive& op) {
         std::unique_ptr<::Botan::PK_Key_Agreement> kas(new ::Botan::PK_Key_Agreement(*priv, rng, "Raw"));
         const auto derived_key = kas->derive_key(0, pub.public_value());
 
-        const auto derived_str = ::Botan::BigInt(derived_key.bits_of()).to_dec_string();
+        const auto derived_str = ::Botan::BigInt::from_bytes(derived_key.bits_of()).to_dec_string();
         if ( derived_str != "0" ) {
             ret = derived_str;
         }
@@ -1369,10 +1370,10 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Add(operation::ECC_Point_
         {
             /* A */
             {
-                const auto a_x = ::Botan::BigInt(op.a.first.ToString(ds));
+                const auto a_x = ::Botan::BigInt::from_string(op.a.first.ToString(ds));
                 CF_CHECK_GTE(a_x, 0);
 
-                const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
+                const auto a_y = ::Botan::BigInt::from_string(op.a.second.ToString(ds));
                 CF_CHECK_GTE(a_y, 0);
 
                 try {
@@ -1384,10 +1385,10 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Add(operation::ECC_Point_
 
             /* B */
             {
-                const auto b_x = ::Botan::BigInt(op.b.first.ToString(ds));
+                const auto b_x = ::Botan::BigInt::from_string(op.b.first.ToString(ds));
                 CF_CHECK_GTE(b_x, 0);
 
-                const auto b_y = ::Botan::BigInt(op.b.second.ToString(ds));
+                const auto b_y = ::Botan::BigInt::from_string(op.b.second.ToString(ds));
                 CF_CHECK_GTE(b_y, 0);
 
                 try {
@@ -1408,8 +1409,8 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Add(operation::ECC_Point_
             CF_ASSERT(is_zero == is_negation, "Unexpected point addition result");
             CF_CHECK_FALSE(is_zero);
 
-            const auto x = ::Botan::BigInt(_res.x_bytes());
-            const auto y = ::Botan::BigInt(_res.y_bytes());
+            const auto x = ::Botan::BigInt::from_bytes(_res.x_bytes());
+            const auto y = ::Botan::BigInt::from_bytes(_res.y_bytes());
 
             ret = {
                 util::HexToDec(x.to_hex_string()),
@@ -1445,10 +1446,10 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Sub(operation::ECC_Point_
         {
             /* A */
             {
-                const auto a_x = ::Botan::BigInt(op.a.first.ToString(ds));
+                const auto a_x = ::Botan::BigInt::from_string(op.a.first.ToString(ds));
                 CF_CHECK_GTE(a_x, 0);
 
-                const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
+                const auto a_y = ::Botan::BigInt::from_string(op.a.second.ToString(ds));
                 CF_CHECK_GTE(a_y, 0);
 
                 try {
@@ -1460,10 +1461,10 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Sub(operation::ECC_Point_
 
             /* B */
             {
-                const auto b_x = ::Botan::BigInt(op.b.first.ToString(ds));
+                const auto b_x = ::Botan::BigInt::from_string(op.b.first.ToString(ds));
                 CF_CHECK_GTE(b_x, 0);
 
-                const auto b_y = ::Botan::BigInt(op.b.second.ToString(ds));
+                const auto b_y = ::Botan::BigInt::from_string(op.b.second.ToString(ds));
                 CF_CHECK_GTE(b_y, 0);
 
                 try {
@@ -1484,8 +1485,8 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Sub(operation::ECC_Point_
             CF_ASSERT(is_zero == is_eq, "Unexpected point subtraction result");
             CF_CHECK_FALSE(is_zero);
 
-            const auto x = ::Botan::BigInt(_res.x_bytes());
-            const auto y = ::Botan::BigInt(_res.y_bytes());
+            const auto x = ::Botan::BigInt::from_bytes(_res.x_bytes());
+            const auto y = ::Botan::BigInt::from_bytes(_res.y_bytes());
 
             ret = {
                 util::HexToDec(x.to_hex_string()),
@@ -1517,15 +1518,15 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Mul(operation::ECC_Point_
     }
 
     try {
-        const auto a_x = ::Botan::BigInt(op.a.first.ToString(ds));
+        const auto a_x = ::Botan::BigInt::from_string(op.a.first.ToString(ds));
         CF_CHECK_GTE(a_x, 0);
 
-        const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
+        const auto a_y = ::Botan::BigInt::from_string(op.a.second.ToString(ds));
         CF_CHECK_GTE(a_y, 0);
 
-        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value();
+        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, a_x, a_y).value();
 
-        const auto b = ::Botan::BigInt(op.b.ToString(ds));
+        const auto b = ::Botan::BigInt::from_string(op.b.ToString(ds));
 
         CF_CHECK_GTE(b, 0);
 
@@ -1546,8 +1547,8 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Mul(operation::ECC_Point_
             _res = std::make_unique<::Botan::EC_AffinePoint>(a.mul(k, rng));
         }
 
-        const auto x = ::Botan::BigInt(_res->x_bytes());
-        const auto y = ::Botan::BigInt(_res->y_bytes());
+        const auto x = ::Botan::BigInt::from_bytes(_res->x_bytes());
+        const auto y = ::Botan::BigInt::from_bytes(_res->y_bytes());
 
         ret = {
             util::HexToDec(x.to_hex_string()),
@@ -1575,18 +1576,18 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Neg(operation::ECC_Point_
     }
 
     try {
-        const auto a_x = ::Botan::BigInt(op.a.first.ToString(ds));
+        const auto a_x = ::Botan::BigInt::from_string(op.a.first.ToString(ds));
         CF_CHECK_GTE(a_x, 0);
 
-        const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
+        const auto a_y = ::Botan::BigInt::from_string(op.a.second.ToString(ds));
         CF_CHECK_GTE(a_y, 0);
 
-        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value();
+        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, a_x, a_y).value();
 
         const ::Botan::EC_AffinePoint _res = a.negate();
 
-        const auto x = ::Botan::BigInt(_res.x_bytes());
-        const auto y = ::Botan::BigInt(_res.y_bytes());
+        const auto x = ::Botan::BigInt::from_bytes(_res.x_bytes());
+        const auto y = ::Botan::BigInt::from_bytes(_res.y_bytes());
 
         ret = {
             util::HexToDec(x.to_hex_string()),
@@ -1615,18 +1616,18 @@ std::optional<component::ECC_Point> Botan::OpECC_Point_Dbl(operation::ECC_Point_
     }
 
     try {
-        const auto a_x = ::Botan::BigInt(op.a.first.ToString(ds));
+        const auto a_x = ::Botan::BigInt::from_string(op.a.first.ToString(ds));
         CF_CHECK_GTE(a_x, 0);
 
-        const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
+        const auto a_y = ::Botan::BigInt::from_string(op.a.second.ToString(ds));
         CF_CHECK_GTE(a_y, 0);
 
-        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value();
+        const auto a = ::Botan::EC_AffinePoint::from_bigint_xy(*group, a_x, a_y).value();
 
         const ::Botan::EC_AffinePoint _res = a.add(a);
 
-        const auto x = ::Botan::BigInt(_res.x_bytes());
-        const auto y = ::Botan::BigInt(_res.y_bytes());
+        const auto x = ::Botan::BigInt::from_bytes(_res.x_bytes());
+        const auto y = ::Botan::BigInt::from_bytes(_res.y_bytes());
 
         ret = {
             util::HexToDec(x.to_hex_string()),
@@ -1661,14 +1662,14 @@ std::optional<bool> Botan::OpECC_Point_Cmp(operation::ECC_Point_Cmp& op) {
         {
             /* A */
             {
-                const auto a_x = ::Botan::BigInt(op.a.first.ToString(ds));
+                const auto a_x = ::Botan::BigInt::from_string(op.a.first.ToString(ds));
                 CF_CHECK_GTE(a_x, 0);
 
-                const auto a_y = ::Botan::BigInt(op.a.second.ToString(ds));
+                const auto a_y = ::Botan::BigInt::from_string(op.a.second.ToString(ds));
                 CF_CHECK_GTE(a_y, 0);
 
                 try {
-                    a = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(a_x), ::Botan::BigInt(a_y)).value());
+                    a = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, a_x, a_y).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
@@ -1676,14 +1677,14 @@ std::optional<bool> Botan::OpECC_Point_Cmp(operation::ECC_Point_Cmp& op) {
 
             /* B */
             {
-                const auto b_x = ::Botan::BigInt(op.b.first.ToString(ds));
+                const auto b_x = ::Botan::BigInt::from_string(op.b.first.ToString(ds));
                 CF_CHECK_GTE(b_x, 0);
 
-                const auto b_y = ::Botan::BigInt(op.b.second.ToString(ds));
+                const auto b_y = ::Botan::BigInt::from_string(op.b.second.ToString(ds));
                 CF_CHECK_GTE(b_y, 0);
 
                 try {
-                    b = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, ::Botan::BigInt(b_x), ::Botan::BigInt(b_y)).value());
+                    b = std::make_unique<::Botan::EC_AffinePoint>(::Botan::EC_AffinePoint::from_bigint_xy(*group, b_x, b_y).value());
                 } catch ( ::Botan::Invalid_Argument ) {
                     goto end;
                 }
@@ -1707,11 +1708,11 @@ std::optional<bool> Botan::OpDSA_Verify(operation::DSA_Verify& op) {
     BOTAN_FUZZER_RNG;
 
     try {
-        const auto p = ::Botan::BigInt(op.parameters.p.ToString(ds));
+        const auto p = ::Botan::BigInt::from_string(op.parameters.p.ToString(ds));
         /* Avoid time-outs */
         CF_CHECK_LTE(p.bytes(), 300);
-        const auto q = ::Botan::BigInt(op.parameters.q.ToString(ds));
-        const auto g = ::Botan::BigInt(op.parameters.g.ToString(ds));
+        const auto q = ::Botan::BigInt::from_string(op.parameters.q.ToString(ds));
+        const auto g = ::Botan::BigInt::from_string(op.parameters.g.ToString(ds));
 
         /* Botan can verify signatures with g = 0.
          * Avoid discrepancies with OpenSSL
@@ -1721,11 +1722,11 @@ std::optional<bool> Botan::OpDSA_Verify(operation::DSA_Verify& op) {
         const ::Botan::DL_Group group(p, q, g);
         CF_CHECK_TRUE(group.verify_group(rng));
 
-        const auto y = ::Botan::BigInt(op.pub.ToString(ds));
+        const auto y = ::Botan::BigInt::from_string(op.pub.ToString(ds));
         const auto pub = std::make_unique<::Botan::DSA_PublicKey>(group, y);
 
-        const auto r = ::Botan::BigInt(op.signature.first.ToString(ds));
-        const auto s = ::Botan::BigInt(op.signature.second.ToString(ds));
+        const auto r = ::Botan::BigInt::from_string(op.signature.first.ToString(ds));
+        const auto s = ::Botan::BigInt::from_string(op.signature.second.ToString(ds));
 
         const auto sig = ::Botan::BigInt::encode_fixed_length_int_pair(
                 r, s, q.bytes());
