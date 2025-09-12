@@ -919,8 +919,9 @@ std::optional<component::ECC_KeyPair> Botan::OpECC_GenerateKeyPair(operation::EC
         ::Botan::EC_Group group(*curveString);
         auto priv = ::Botan::ECDSA_PrivateKey(rng, group);
 
-        const auto pub_x = ::Botan::BigInt(priv._public_ec_point().x_bytes());
-        const auto pub_y = ::Botan::BigInt(priv._public_ec_point().y_bytes());
+        const auto public_point = ::Botan::EC_AffinePoint::deserialize(group, priv.raw_public_key_bits());
+        const auto pub_x = ::Botan::BigInt::from_bytes(public_point->x_bytes());
+        const auto pub_y = ::Botan::BigInt::from_bytes(public_point->y_bytes());
 
         {
             const auto pub = priv.public_key();
@@ -996,8 +997,9 @@ std::optional<component::ECC_PublicKey> Botan::OpECC_PrivateToPublic(operation::
 
             auto priv = std::make_unique<::Botan::ECDSA_PrivateKey>(::Botan::ECDSA_PrivateKey(rng, group, priv_bn));
 
-            const auto pub_x = ::Botan::BigInt(priv->_public_ec_point().x_bytes());
-            const auto pub_y = ::Botan::BigInt(priv->_public_ec_point().y_bytes());
+            const auto public_point = ::Botan::EC_AffinePoint::deserialize(group, priv->raw_public_key_bits());
+            const auto pub_x = ::Botan::BigInt::from_bytes(public_point->x_bytes());
+            const auto pub_y = ::Botan::BigInt::from_bytes(public_point->y_bytes());
 
             ret = { pub_x.to_dec_string(), pub_y.to_dec_string() };
         }
@@ -1100,8 +1102,9 @@ namespace Botan_detail {
                             }
                         }
 
-                        const auto pub_x = ::Botan::BigInt(priv->_public_ec_point().x_bytes()).to_dec_string();
-                        const auto pub_y = ::Botan::BigInt(priv->_public_ec_point().y_bytes()).to_dec_string();
+                        const auto public_point = ::Botan::EC_AffinePoint::deserialize(priv->domain(), priv->raw_public_key_bits());
+                        const auto pub_x = ::Botan::BigInt::from_bytes(public_point->x_bytes()).to_dec_string();
+                        const auto pub_y = ::Botan::BigInt::from_bytes(public_point->y_bytes()).to_dec_string();
 
                         const auto R_str = R.to_dec_string();
                         const auto S_str = S.to_dec_string();
@@ -1292,10 +1295,11 @@ std::optional<component::ECC_PublicKey> Botan::OpECDSA_Recover(operation::ECDSA_
         try {
             pub = std::make_unique<::Botan::ECDSA_PublicKey>(*group, CT.Get(), R, S, op.id);
 
-            ret = {
-                ::Botan::BigInt(pub->_public_ec_point().x_bytes()).to_dec_string(),
-                ::Botan::BigInt(pub->_public_ec_point().y_bytes()).to_dec_string()
-            };
+            const auto public_point = ::Botan::EC_AffinePoint::deserialize(*group, pub->raw_public_key_bits());
+            const auto pub_x = ::Botan::BigInt::from_bytes(public_point->x_bytes());
+            const auto pub_y = ::Botan::BigInt::from_bytes(public_point->y_bytes());
+
+            ret = { pub_x.to_dec_string(), pub_y.to_dec_string() };
         } catch ( ::Botan::Invalid_State& e ) {
         } catch ( ::Botan::Decoding_Error& ) {
         } catch ( ::Botan::Invalid_Argument& ) {
