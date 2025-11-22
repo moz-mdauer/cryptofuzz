@@ -964,6 +964,55 @@ end:
     return ret;
 }
 
+std::optional<component::Secret> NSS::OpECDH_Derive(operation::ECDH_Derive& op) {
+    std::optional<component::Secret> ret = std::nullopt;
+
+    ECParams* ecparams = nullptr;
+    ECPrivateKey* privKey = nullptr;
+    std::vector<uint8_t> pub;
+    SECItem publicValue;
+
+    CF_CHECK_NE(ecparams = nss_detail::ToECParams(op.curveType), nullptr);
+    CF_CHECK_NE(privKey = nss_detail::ToECPrivateKey(ecparams, op.priv.ToTrimmedString()), nullptr);
+    CF_CHECK_TRUE(nss_detail::IsValidPrivKey(op.curveType, op.priv.ToTrimmedString()));
+
+    /* Format public key as uncompressed point (0x04 || x || y) */
+    {
+        std::optional<std::vector<uint8_t>> pub_x, pub_y;
+        CF_CHECK_NE(pub_x = util::DecToBin(op.pub.first.ToTrimmedString(), ecparams->order.len), std::nullopt);
+        CF_CHECK_NE(pub_y = util::DecToBin(op.pub.second.ToTrimmedString(), ecparams->order.len), std::nullopt);
+        pub.push_back(0x04);
+        pub.insert(std::end(pub), std::begin(*pub_x), std::end(*pub_x));
+        pub.insert(std::end(pub), std::begin(*pub_y), std::end(*pub_y));
+        publicValue = {siBuffer, pub.data(), static_cast<unsigned int>(pub.size())};
+
+        /* Validate the public key */
+        if ( EC_ValidatePublicKey(ecparams, &publicValue) != SECSuccess ) {
+            goto end;
+        }
+    }
+
+    /* Derive the shared secret using ECDH */
+    {
+        SECItem secretItem = {siBuffer, nullptr, 0};
+        CF_CHECK_EQ(ECDH_Derive(&publicValue, ecparams, &privKey->privateValue, PR_FALSE, &secretItem), SECSuccess);
+        CF_CHECK_NE(secretItem.data, nullptr);
+        CF_CHECK_GT(secretItem.len, 0);
+        ret = component::Secret(Buffer(secretItem.data, secretItem.len));
+        SECITEM_FreeItem(&secretItem, PR_FALSE);
+    }
+
+end:
+    if ( privKey ) {
+        PORT_FreeArena(privKey->ecParams.arena, PR_FALSE);
+    }
+    if ( ecparams ) {
+        PORT_FreeArena(ecparams->arena, PR_FALSE);
+    }
+
+    return ret;
+}
+
 std::optional<component::Key> NSS::OpKDF_TLS1_PRF(operation::KDF_TLS1_PRF& op) {
     std::optional<component::Key> ret = std::nullopt;
 
