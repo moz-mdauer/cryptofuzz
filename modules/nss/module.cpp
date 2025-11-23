@@ -1013,6 +1013,34 @@ end:
     return ret;
 }
 
+std::optional<component::Bignum> NSS::OpDH_Derive(operation::DH_Derive& op) {
+    std::optional<component::Bignum> ret = std::nullopt;
+
+    std::optional<std::vector<uint8_t>> pub_bytes, prime_bytes, priv_bytes;
+    SECItem publicValue, prime, privateValue;
+    SECItem derivedSecret = {siBuffer, nullptr, 0};
+
+    /* Convert bignums to binary */
+    CF_CHECK_NE(pub_bytes = util::DecToBin(op.pub.ToTrimmedString()), std::nullopt);
+    CF_CHECK_NE(prime_bytes = util::DecToBin(op.prime.ToTrimmedString()), std::nullopt);
+    CF_CHECK_NE(priv_bytes = util::DecToBin(op.priv.ToTrimmedString()), std::nullopt);
+
+    publicValue = {siBuffer, pub_bytes->data(), static_cast<unsigned int>(pub_bytes->size())};
+    prime = {siBuffer, prime_bytes->data(), static_cast<unsigned int>(prime_bytes->size())};
+    privateValue = {siBuffer, priv_bytes->data(), static_cast<unsigned int>(priv_bytes->size())};
+
+    /* Derive the shared secret */
+    CF_CHECK_EQ(DH_Derive(&publicValue, &prime, &privateValue, &derivedSecret, 0), SECSuccess);
+    CF_CHECK_NE(derivedSecret.data, nullptr);
+    CF_CHECK_GT(derivedSecret.len, 0);
+
+    ret = component::Bignum(util::BinToDec(derivedSecret.data, derivedSecret.len));
+
+end:
+    SECITEM_FreeItem(&derivedSecret, PR_FALSE);
+    return ret;
+}
+
 std::optional<component::Key> NSS::OpKDF_TLS1_PRF(operation::KDF_TLS1_PRF& op) {
     std::optional<component::Key> ret = std::nullopt;
 
