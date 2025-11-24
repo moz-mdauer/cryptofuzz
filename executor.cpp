@@ -2785,7 +2785,7 @@ void ExecutorBase<ResultType, OperationType>::Run(Datasource& parentDs, const ui
 
         if ( i > 0 ) {
             auto& prevModule = operations[i-1].first;
-            auto& prevOp = operations[i].second;
+            auto& prevOp = operations[i-1].second;
 
             if ( prevModule == module && prevOp.modifier == op.modifier ) {
                 auto& curModifier = op.modifier.GetVectorPtr();
