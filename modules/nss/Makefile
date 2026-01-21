@@ -76,3 +76,4 @@ module.o: module.cpp module.h bn_ops.h
 
 clean:
 	rm -rf *.o module.a
+
